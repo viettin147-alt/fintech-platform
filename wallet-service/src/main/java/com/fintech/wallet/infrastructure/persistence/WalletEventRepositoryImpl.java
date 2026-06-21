@@ -5,8 +5,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fintech.wallet.domain.events.DomainEvent;
 import com.fintech.wallet.domain.events.MoneyDepositedEvent;
 import com.fintech.wallet.domain.events.MoneyWithdrawnEvent;
+import com.fintech.wallet.domain.exceptions.OptimisticLockException;
 import com.fintech.wallet.domain.repository.WalletEventRepository;
 import com.fintech.wallet.infrastructure.JpaEventStoreEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -22,7 +24,7 @@ public class WalletEventRepositoryImpl implements WalletEventRepository {
         this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule()); // Hỗ trợ Java 8 LocalDateTime
     }
 
-    @Override
+        @Override
     public void saveEvents(List<DomainEvent> events) {
         for (DomainEvent event : events) {
             try {
@@ -34,9 +36,13 @@ public class WalletEventRepositoryImpl implements WalletEventRepository {
                         jsonPayload,
                         event.occurredOn()
                 );
-                jpaRepository.save(entity);
+                    jpaRepository.saveAndFlush(entity);
+            } catch (DataIntegrityViolationException e) {
+                // UniqueConstraint(aggregate_id, version) bi trung -> Race Condition detected!
+                throw new OptimisticLockException(
+                        "Xung dot phien ban! AggregateId=" + event.aggregateId() + ", version=" + event.version(), e);
             } catch (Exception e) {
-                throw new RuntimeException("Lỗi lưu trữ Event sang JSON", e);
+                throw new RuntimeException("Loi luu tru Event sang JSON", e);
             }
         }
     }
