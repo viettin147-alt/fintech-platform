@@ -3,6 +3,7 @@ package com.fintech.wallet.domain.models;
 import com.fintech.wallet.domain.events.DomainEvent;
 import com.fintech.wallet.domain.events.MoneyDepositedEvent;
 import com.fintech.wallet.domain.events.MoneyWithdrawnEvent;
+import com.fintech.wallet.domain.exceptions.InsufficientBalanceException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ public class WalletAccount {
     private final WalletId id;
     private final String userId;
     private BigDecimal balance;
+    private long version = 0;
 
     // Danh sách lưu tạm các event mới sinh ra trước khi lưu xuống Event Store
     private final List<DomainEvent> changes = new ArrayList<>();
@@ -29,8 +31,9 @@ public class WalletAccount {
             throw new IllegalArgumentException("Số tiền nạp phải lớn hơn 0");
         }
 
+        long nextVersion = this.version + 1;
         // Tạo ra sự kiện (Nhưng chưa làm thay đổi số dư ngay)
-        MoneyDepositedEvent event = new MoneyDepositedEvent(this.id.value(), amount);
+        MoneyDepositedEvent event = new MoneyDepositedEvent(this.id.value(), amount, nextVersion);
 
         // Ghi nhận sự kiện này vào hàng đợi thay đổi
         this.changes.add(event);
@@ -45,11 +48,13 @@ public class WalletAccount {
         }
 
         // Kiểm tra số dư hiện tại
-        if (this.balance.compareTo(amount) <= 0) {
+        // Chỉ cấm khi số dư < số tiền muốn rút. Nếu bằng nhau (rút hết) thì vẫn hợp lệ.
+        if (this.balance.compareTo(amount) < 0) {
             throw new IllegalArgumentException("Số dư không đủ để rút");
         }
 
-        MoneyWithdrawnEvent event = new MoneyWithdrawnEvent(this.id.value(), amount);
+        long nextVersion = this.version + 1;
+        MoneyWithdrawnEvent event = new MoneyWithdrawnEvent(this.id.value(), amount, nextVersion);
         this.changes.add(event);
         this.apply(event);
     }
@@ -62,6 +67,7 @@ public class WalletAccount {
         else if  (event instanceof MoneyWithdrawnEvent e) {
             this.balance = this.balance.subtract(e.amount());
         }
+        this.version = event.version();
     }
 
     // TÁI TẠO TRẠNG THÁI (Dùng cho luồng Replay từ DB sau này)

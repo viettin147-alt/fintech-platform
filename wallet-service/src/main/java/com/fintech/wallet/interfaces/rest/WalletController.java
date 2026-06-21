@@ -33,7 +33,7 @@ public class WalletController {
             walletApplicationService.withdrawMoney(id, amount);
             return ResponseEntity.ok("Rút tiền thành công từ ví: " + id);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Giao dịch thất bại: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Hệ thống đang bận, vui lòng thử lại sau!");
         }
     }
 }

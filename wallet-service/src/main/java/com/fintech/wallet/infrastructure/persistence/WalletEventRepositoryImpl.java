@@ -29,6 +29,7 @@ public class WalletEventRepositoryImpl implements WalletEventRepository {
                 String jsonPayload = objectMapper.writeValueAsString(event);
                 JpaEventStoreEntity entity = new JpaEventStoreEntity(
                         event.aggregateId(),
+                        event.version(),
                         event.getClass().getSimpleName(),
                         jsonPayload,
                         event.occurredOn()
@@ -62,4 +63,9 @@ public class WalletEventRepositoryImpl implements WalletEventRepository {
         }
         return history;
     }
+    @Override
+    public void clearAllEvents() {
+        jpaRepository.deleteAllInBatch();
+    }
+
 }

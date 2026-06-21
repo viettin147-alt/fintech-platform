@@ -5,6 +5,8 @@ import com.fintech.wallet.domain.models.WalletAccount;
 import com.fintech.wallet.domain.models.WalletId;
 import com.fintech.wallet.domain.repository.WalletEventRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ public class WalletApplicationService {
         account.clearChanges();
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void withdrawMoney(String walletIdValue, BigDecimal amount) {
         WalletId walletId = new WalletId(walletIdValue);
 

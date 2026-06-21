@@ -9,4 +9,5 @@ import java.util.List;
 public interface WalletEventRepository {
     void saveEvents(List<DomainEvent> events);
     List<DomainEvent> loadEvents(String aggregateId);
+    void clearAllEvents();
 }
